@@ -31,7 +31,7 @@ public class SnowflakesWallpaperService extends WallpaperService {
         public Snowflake(Point position, float density) {
             this.position = position;
             this.density = density;
-            this.hSpeed = (float) (0.5f - Math.random()) * 0.7f;
+            this.hSpeed = (float) (0.5f - Math.random());
             this.rSpeed = (float) (0.5f - Math.random());
             this.bitmap = createBitmap(this.density);
         }
@@ -184,7 +184,7 @@ public class SnowflakesWallpaperService extends WallpaperService {
                         matrix.postTranslate(p.x - bitmap.getWidth() / 2, p.y - bitmap.getHeight() / 2);
                         canvas.drawBitmap(flake.getBitmap(), matrix, paint);
 
-                        p.offset((int) (density * 3 * (0.5f - Math.random() + flake.getHSpeed())), (int) (1.5 * density));
+                        p.offset((int) (density * 3 * (Math.sin(p.y/density/10)/2 + flake.getHSpeed())), (int) (1.5 * density));
 
                         if (p.y > height || p.x < 0 || p.x > width) {
                             dots.set(i, new Snowflake(new Point((int) (this.width * Math.random()), 0), density));
