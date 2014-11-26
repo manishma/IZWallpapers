@@ -41,7 +41,7 @@ public class SnowflakesWallpaperService extends WallpaperService {
             paint.setAntiAlias(true);
             paint.setStyle(Paint.Style.FILL);
 
-            int size = (int) ((40 + 20 * Math.random()) * density);
+            int size = 2 * (int) ((40 + 20 * Math.random()) * density / 2);
 
             // draw segment
             Bitmap segment = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
@@ -178,16 +178,17 @@ public class SnowflakesWallpaperService extends WallpaperService {
                         Snowflake flake = dots.get(i);
                         Point p = flake.getPosition();
                         Bitmap bitmap = flake.getBitmap();
+                        int halfSize = bitmap.getWidth() / 2;
 
                         Matrix matrix = new Matrix();
-                        matrix.setRotate(((int) (3 * p.y * flake.getRSpeed()/density)) % 360, bitmap.getWidth() / 2, bitmap.getHeight() / 2);
-                        matrix.postTranslate(p.x - bitmap.getWidth() / 2, p.y - bitmap.getHeight() / 2);
+                        matrix.setRotate(((int) (3 * p.y * flake.getRSpeed() / density)) % 360, halfSize, halfSize);
+                        matrix.postTranslate(p.x - halfSize, p.y - halfSize);
                         canvas.drawBitmap(flake.getBitmap(), matrix, paint);
 
-                        p.offset((int) (density * 3 * (Math.sin(p.y/density/10)/2 + flake.getHSpeed())), (int) (1.5 * density));
+                        p.offset((int) (density * 3 * (Math.sin(p.y / density / 10) / 2 + flake.getHSpeed())), (int) (1.5 * density));
 
-                        if (p.y > height || p.x < 0 || p.x > width) {
-                            dots.set(i, new Snowflake(new Point((int) (this.width * Math.random()), 0), density));
+                        if (p.y > height + halfSize || p.x < -halfSize || p.x > width + halfSize) {
+                            dots.set(i, new Snowflake(new Point((int) (this.width * Math.random()), -(int) (60 * density) / 2), density));
                         }
                     }
                 }
