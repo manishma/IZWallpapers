@@ -183,7 +183,7 @@ public class SnowflakesWallpaperService extends WallpaperService {
                         Matrix matrix = new Matrix();
                         matrix.setRotate(((int) (3 * p.y * flake.getRSpeed() / density)) % 360, halfSize, halfSize);
                         matrix.postTranslate(p.x - halfSize, p.y - halfSize);
-                        canvas.drawBitmap(flake.getBitmap(), matrix, paint);
+                        canvas.drawBitmap(bitmap, matrix, paint);
 
                         p.offset((int) (density * 3 * (Math.sin(p.y / density / 10) / 2 + flake.getHSpeed())), (int) (1.5 * density));
 
