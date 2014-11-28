@@ -6,7 +6,6 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.Point;
 import android.graphics.PointF;
 import android.os.Handler;
 import android.service.wallpaper.WallpaperService;
@@ -32,11 +31,14 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
 
         private final Paint paint;
         private final float density;
+        private final int size;
+        private final Path segmentPath;
         private int width;
         private int height;
         private boolean visible = true;
-        private Bitmap bitmap;
-        private int rotation;
+        private Bitmap[] stamps;
+        private int stampsOffset;
+        private int bgColor;
 
         public KaleidoscopeWallpaperEngine() {
             paint = new Paint();
@@ -45,15 +47,27 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
 
             density = getResources().getDisplayMetrics().density;
 
-            handler.post(drawRunner);
+            size = 4 * (int) (160 * density / 4);
 
+            segmentPath = new Path();
+            segmentPath.moveTo(size / 2, size / 2);
+            segmentPath.lineTo(0.933f * size, size / 4);
+            segmentPath.lineTo(0.933f * size, 3 * size / 4);
+            segmentPath.close();
+
+            bgColor = getRandomColor();
+
+            stamps = new Bitmap[]{
+                    generateStamp(),
+                    generateStamp(),
+                    generateStamp()
+            };
         }
 
         @Override
         public void onVisibilityChanged(boolean visible) {
             this.visible = visible;
             if (visible) {
-                this.resetBitmap();
                 handler.post(drawRunner);
             } else {
                 handler.removeCallbacks(drawRunner);
@@ -71,15 +85,6 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
 
             this.width = width;
             this.height = height;
-
-            this.resetBitmap();
-        }
-
-        private void resetBitmap() {
-
-            this.rotation = 0;
-            this.bitmap = generateBitmap();
-
         }
 
         @Override
@@ -94,48 +99,44 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
             return Color.HSVToColor(new float[]{hue, 1, 0.5f});
         }
 
-        private PointF getRandomPointWithinSegment(int size) {
-            float x = (float) (1 + Math.random()) * size / 2;
-            float y = (float) ((2 * x - size) * Math.random()) + size - x;
+        private PointF getRandomPointWithinStamp() {
+            float x = (float) (size * Math.random() / 2);
+            float y = (float) (size * Math.random());
             return new PointF(x, y);
         }
 
-        public Bitmap generateBitmap() {
+        public Bitmap generateStamp() {
 
+            Bitmap bitmap = Bitmap.createBitmap(size / 2, size, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bitmap);
 
-            Paint paint = new Paint();
-            paint.setAntiAlias(true);
-            paint.setStyle(Paint.Style.FILL);
-
-            int size = 2 * (int) (160 * density / 2);
-
-            // draw segment
-            Bitmap segment = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
-            Canvas segmentCanvas = new Canvas(segment);
-            Path path = new Path();
-            path.moveTo(size / 2, size / 2);
-            path.lineTo(0.933f * size, size / 4);
-            path.lineTo(0.933f * size, 3 * size / 4);
-            path.close();
-
-            segmentCanvas.clipPath(path);
-            segmentCanvas.drawColor(getRandomColor());
-
-            paint.setStrokeWidth(1f * density);
-            for (int i = 0; i < 5; i++) {
+            for (int i = 0; i < 3; i++) {
                 Path elPath = new Path();
-                PointF p = getRandomPointWithinSegment(size);
+                PointF p = getRandomPointWithinStamp();
                 elPath.moveTo(p.x, p.y);
                 int n = 2 + (int) (3 * Math.random());
                 for (int j = 0; j < n; j++) {
-                    p = getRandomPointWithinSegment(size);
+                    p = getRandomPointWithinStamp();
                     elPath.lineTo(p.x, p.y);
                 }
                 elPath.close();
                 paint.setColor(getRandomColor());
-                segmentCanvas.drawPath(elPath, paint);
+                canvas.drawPath(elPath, paint);
             }
 
+            return bitmap;
+        }
+
+        public Bitmap generatePattern() {
+
+            // draw segment
+            Bitmap segment = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+            Canvas segmentCanvas = new Canvas(segment);
+            segmentCanvas.clipPath(segmentPath);
+
+            for (int i = 0; i < stamps.length; i++) {
+                segmentCanvas.drawBitmap(stamps[i], size / 2, size / 4 + stampsOffset - i * size / 2, paint);
+            }
 
             Bitmap bm = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(bm);
@@ -160,25 +161,45 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
             try {
                 canvas = holder.lockCanvas();
                 if (canvas != null) {
-                    canvas.drawARGB(255, 0, 0, 0);
-                    int halfSize = bitmap.getWidth() / 2;//
-                    Matrix matrix = new Matrix();
-                    matrix.setRotate(rotation, halfSize, halfSize);
-                    matrix.postTranslate(width / 2 - halfSize, height / 2 - halfSize);
-                    canvas.drawBitmap(bitmap, matrix, paint);
 
-//                    this.rotation++;
+                    canvas.drawColor(bgColor);
 
-                    this.rotation = (++this.rotation) % 120;
+                    Bitmap pattern = generatePattern();
+
+                    float patternWidth = size * 0.866f;
+                    float patternHeight = size;
+
+                    int columns = (int) Math.ceil((this.width - patternWidth) / 2 / patternWidth);
+                    int lines = (int) Math.ceil((2 * this.height - patternHeight) / 3 / patternHeight);
+                    float y0 = this.height / 2 - size / 2;
+                    float x0 = this.width / 2 - size / 2;
+
+                    for (int l = -lines; l <= lines; l++) {
+
+                        float y = y0 + l * 3 * patternHeight / 4;
+
+                        for (int c = -columns; c <= columns + Math.abs(l) % 2; c++) {
+
+                            float x = x0 + c * patternWidth - (Math.abs(l) % 2) * patternWidth / 2;
+                            Matrix matrix = new Matrix();
+                            matrix.postTranslate(x, y);
+                            canvas.drawBitmap(pattern, matrix, paint);
+                        }
+                    }
                 }
             } finally {
                 if (canvas != null)
                     holder.unlockCanvasAndPost(canvas);
             }
-//
-//            if (rotation >= 60) {
-//                this.resetBitmap();
-//            }
+
+            stampsOffset += (int) density;
+            if (stampsOffset >= size / 2) {
+                stampsOffset = 0;
+                for (int i = 0; i < stamps.length - 1; i++) {
+                    stamps[i] = stamps[i + 1];
+                }
+                stamps[stamps.length - 1] = generateStamp();
+            }
 
             if (visible) {
                 handler.postDelayed(drawRunner, 40);
