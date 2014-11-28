@@ -169,9 +169,9 @@ public class SnowflakesWallpaperService extends WallpaperService {
             try {
                 canvas = holder.lockCanvas();
                 if (canvas != null) {
-                    paint.setColor(Color.HSVToColor(new float[]{this.hue, 1, 0.5f}));
+                    int bgColor = Color.HSVToColor(new float[]{this.hue, 1, 0.5f});
                     this.hue = (++this.hue) % 360;
-                    canvas.drawRect(0, 0, this.width, this.height, paint);
+                    canvas.drawColor(bgColor);
 
                     // draw dots
                     for (int i = 0; i < dots.size(); i++) {
