@@ -50,9 +50,9 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
             size = 4 * (int) (160 * density / 4);
 
             segmentPath = new Path();
-            segmentPath.moveTo(size / 2, size / 2);
-            segmentPath.lineTo(0.933f * size, size / 4);
-            segmentPath.lineTo(0.933f * size, 3 * size / 4);
+            segmentPath.moveTo(0, 0);
+            segmentPath.lineTo(0.433f * size, -size / 4);
+            segmentPath.lineTo(0.433f * size, size / 4);
             segmentPath.close();
 
             bgColor = getRandomColor();
@@ -96,7 +96,7 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
 
         private int getRandomColor() {
             float hue = (float) (360f * Math.random());
-            return Color.HSVToColor(new float[]{hue, 1, 0.5f});
+            return Color.HSVToColor(new float[]{hue, 1f, 1f});
         }
 
         private PointF getRandomPointWithinStamp() {
@@ -127,34 +127,6 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
             return bitmap;
         }
 
-        public Bitmap generatePattern() {
-
-            // draw segment
-            Bitmap segment = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
-            Canvas segmentCanvas = new Canvas(segment);
-            segmentCanvas.clipPath(segmentPath);
-
-            for (int i = 0; i < stamps.length; i++) {
-                segmentCanvas.drawBitmap(stamps[i], size / 2, size / 4 + stampsOffset - i * size / 2, paint);
-            }
-
-            Bitmap bm = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
-            Canvas canvas = new Canvas(bm);
-            for (int i = 0; i < 6; i++) {
-                Matrix matrix = new Matrix();
-                if (i % 2 == 0) {
-                    matrix.setRotate(60 * i, size / 2, size / 2);
-                } else {
-                    matrix.setScale(1, -1);
-                    matrix.postTranslate(0, size);
-                    matrix.postRotate(60 * i, size / 2, size / 2);
-                }
-                canvas.drawBitmap(segment, matrix, paint);
-            }
-
-            return bm;
-        }
-
         private void draw() {
             SurfaceHolder holder = getSurfaceHolder();
             Canvas canvas = null;
@@ -164,15 +136,14 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
 
                     canvas.drawColor(bgColor);
 
-                    Bitmap pattern = generatePattern();
-
                     float patternWidth = size * 0.866f;
                     float patternHeight = size;
 
                     int columns = (int) Math.ceil((this.width - patternWidth) / 2 / patternWidth);
                     int lines = (int) Math.ceil((2 * this.height - patternHeight) / 3 / patternHeight);
-                    float y0 = this.height / 2 - size / 2;
-                    float x0 = this.width / 2 - size / 2;
+                    float y0 = this.height / 2;
+                    float x0 = this.width / 2;
+                    Matrix matrix = new Matrix();
 
                     for (int l = -lines; l <= lines; l++) {
 
@@ -181,9 +152,33 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
                         for (int c = -columns; c <= columns + Math.abs(l) % 2; c++) {
 
                             float x = x0 + c * patternWidth - (Math.abs(l) % 2) * patternWidth / 2;
-                            Matrix matrix = new Matrix();
-                            matrix.postTranslate(x, y);
-                            canvas.drawBitmap(pattern, matrix, paint);
+
+                            for (int r = 0; r < 6; r++) {
+
+                                matrix.reset();
+                                matrix.postRotate(60 * r, 0, 0);
+                                matrix.postTranslate(x, y);
+
+                                Path path = new Path(segmentPath);
+                                path.transform(matrix);
+
+                                canvas.save();
+                                canvas.clipPath(path);
+
+                                for (int i = 0; i < stamps.length; i++) {
+                                    matrix.reset();
+                                    matrix.postTranslate(0, 0 - size / 4 + stampsOffset - i * size / 2);
+                                    if (r % 2 > 0) {
+                                        matrix.postScale(1, -1);
+                                    }
+                                    matrix.postRotate(60 * r, 0, 0);
+                                    matrix.postTranslate(x, y);
+                                    canvas.drawBitmap(stamps[i], matrix, paint);
+                                }
+
+                                canvas.restore();
+                            }
+
                         }
                     }
                 }
