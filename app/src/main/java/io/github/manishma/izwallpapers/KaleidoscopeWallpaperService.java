@@ -197,7 +197,8 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
 
         private int getRandomColor() {
             float hue = (float) (360f * Math.random());
-            return Color.HSVToColor(new float[]{hue, 1f, 1f});
+            float sat = (float) (.5f * Math.random() + .2f);
+            return Color.HSVToColor(new float[]{hue, sat, .9f});
         }
 
         private void draw() {
