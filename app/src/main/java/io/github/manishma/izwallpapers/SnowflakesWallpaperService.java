@@ -36,6 +36,10 @@ public class SnowflakesWallpaperService extends WallpaperService {
             this.bitmap = createBitmap(this.density);
         }
 
+        public void recycle() {
+            this.bitmap.recycle();
+        }
+
         private static Bitmap createBitmap(float density) {
             Paint paint = new Paint();
             paint.setAntiAlias(true);
@@ -142,7 +146,7 @@ public class SnowflakesWallpaperService extends WallpaperService {
             this.height = height;
 
             // init points
-            dots.clear();
+            this.clearSnowflakes();
             for (int i = 0; i < 10; i++) {
                 Point position = new Point((int) (this.width * Math.random()), (int) (this.height * Math.random()));
                 dots.add(new Snowflake(position, density));
@@ -152,8 +156,17 @@ public class SnowflakesWallpaperService extends WallpaperService {
         @Override
         public void onSurfaceDestroyed(SurfaceHolder holder) {
             super.onSurfaceDestroyed(holder);
+
+            this.clearSnowflakes();
             this.visible = false;
             handler.removeCallbacks(drawRunner);
+        }
+
+        private void clearSnowflakes() {
+            for (int i = 0; i<dots.size();i++) {
+                dots.get(i).recycle();
+            }
+            dots.clear();
         }
 
         private void draw() {
@@ -181,6 +194,7 @@ public class SnowflakesWallpaperService extends WallpaperService {
                         p.offset((int) (density * 3 * (Math.sin(p.y / density / 10) / 2 + flake.getHSpeed())), (int) (1.5 * density));
 
                         if (p.y > height + halfSize || p.x < -halfSize || p.x > width + halfSize) {
+                            dots.get(i).recycle();
                             dots.set(i, new Snowflake(new Point((int) (this.width * Math.random()), -(int) (60 * density) / 2), density));
                         }
                     }

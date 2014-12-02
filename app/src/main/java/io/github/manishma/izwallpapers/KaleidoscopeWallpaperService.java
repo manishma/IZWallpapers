@@ -51,12 +51,6 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
             segmentPath.close();
 
             bgColor = getRandomColor();
-
-            stamps = new Bitmap[]{
-                    generateStamp(),
-                    generateStamp(),
-                    generateStamp()
-            };
         }
 
         @Override
@@ -71,7 +65,15 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
 
         @Override
         public void onSurfaceCreated(SurfaceHolder holder) {
+
             super.onSurfaceCreated(holder);
+
+            stamps = new Bitmap[]{
+                    generateStamp(),
+                    generateStamp(),
+                    generateStamp()
+            };
+
         }
 
         @Override
@@ -85,6 +87,11 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
         @Override
         public void onSurfaceDestroyed(SurfaceHolder holder) {
             super.onSurfaceDestroyed(holder);
+
+            for (int i = 0; i < stamps.length; i++) {
+                stamps[i].recycle();
+            }
+            stamps = null;
             this.visible = false;
             handler.removeCallbacks(drawRunner);
         }
@@ -194,6 +201,7 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
             stampsOffset += (int) density;
             if (stampsOffset >= size / 2) {
                 stampsOffset = 0;
+                stamps[0].recycle();
                 for (int i = 0; i < stamps.length - 1; i++) {
                     stamps[i] = stamps[i + 1];
                 }
