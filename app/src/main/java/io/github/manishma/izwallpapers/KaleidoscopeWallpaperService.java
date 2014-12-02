@@ -6,6 +6,7 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.PixelFormat;
 import android.graphics.PointF;
 import android.os.Handler;
 import android.service.wallpaper.WallpaperService;
@@ -95,10 +96,11 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
             }
 
             private Bitmap generateStrip() {
-                Bitmap bitmap = Bitmap.createBitmap(size / 2, size * 2, Bitmap.Config.ARGB_8888);
+                Bitmap bitmap = Bitmap.createBitmap(size / 2, size * 2, Bitmap.Config.RGB_565);
                 Canvas canvas = new Canvas(bitmap);
                 Matrix matrix = new Matrix();
 
+                canvas.drawColor(bgColor);
                 for (int i = 0; i < stamps.length; i++) {
                     matrix.reset();
                     matrix.postTranslate(0, size - i * size / 2);
@@ -170,6 +172,7 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
 
             super.onSurfaceCreated(holder);
 
+            holder.setFormat(PixelFormat.RGB_565);
             strip = new Strip();
         }
 
