@@ -35,9 +35,111 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
         private int width;
         private int height;
         private boolean visible = true;
-        private Bitmap[] stamps;
-        private int stampsOffset;
         private int bgColor;
+        private Strip strip;
+
+        private class Strip {
+
+            private int stampsOffset;
+            private Bitmap[] stamps;
+            private Bitmap bitmap;
+
+            public Strip() {
+
+                stamps = new Bitmap[]{
+                        generateStamp(),
+                        generateStamp(),
+                        generateStamp()
+                };
+
+                bitmap = generateStrip();
+
+            }
+
+            public Bitmap getBitmap() {
+                return bitmap;
+            }
+
+            public int getStampsOffset() {
+                return stampsOffset;
+            }
+
+            public void recycle() {
+
+                for (int i = 0; i < stamps.length; i++) {
+                    stamps[i].recycle();
+                }
+                bitmap.recycle();
+
+            }
+
+            public void move() {
+
+                stampsOffset += (int) density;
+                if (stampsOffset >= size / 2) {
+                    stampsOffset = 0;
+                    stamps[0].recycle();
+                    for (int i = 0; i < stamps.length - 1; i++) {
+                        stamps[i] = stamps[i + 1];
+                    }
+                    stamps[stamps.length - 1] = generateStamp();
+                    bitmap = generateStrip();
+                }
+
+            }
+
+            private PointF getRandomPointWithinStamp() {
+                float x = (float) (size * Math.random() / 2);
+                float y = (float) (size * Math.random());
+                return new PointF(x, y);
+            }
+
+            private Bitmap generateStrip() {
+                Bitmap bitmap = Bitmap.createBitmap(size / 2, size * 2, Bitmap.Config.ARGB_8888);
+                Canvas canvas = new Canvas(bitmap);
+                Matrix matrix = new Matrix();
+
+                for (int i = 0; i < stamps.length; i++) {
+                    matrix.reset();
+                    matrix.postTranslate(0, size - i * size / 2);
+                    canvas.drawBitmap(stamps[i], matrix, null);
+                }
+
+                return bitmap;
+            }
+
+            private Bitmap generateStamp() {
+                Paint paint = new Paint();
+                paint.setAntiAlias(true);
+                paint.setStyle(Paint.Style.FILL);
+
+                Bitmap bitmap = Bitmap.createBitmap(size / 2, size, Bitmap.Config.ARGB_8888);
+                Canvas canvas = new Canvas(bitmap);
+
+                for (int i = 0; i < 3; i++) {
+                    Path elPath = new Path();
+                    PointF p = getRandomPointWithinStamp();
+                    elPath.moveTo(p.x, p.y);
+                    int n = 2 + (int) (3 * Math.random());
+                    for (int j = 0; j < n; j++) {
+                        p = getRandomPointWithinStamp();
+                        elPath.lineTo(p.x, p.y);
+                    }
+                    elPath.close();
+                    paint.setColor(getRandomColor());
+                    canvas.drawPath(elPath, paint);
+                }
+
+                for (int i = 0; i < 2; i++) {
+                    PointF p = getRandomPointWithinStamp();
+                    paint.setColor(getRandomColor());
+                    canvas.drawCircle(p.x, p.y, (float) ((Math.random() * size) / 4), paint);
+                }
+
+                return bitmap;
+            }
+
+        }
 
         public KaleidoscopeWallpaperEngine() {
             density = getResources().getDisplayMetrics().density;
@@ -68,12 +170,7 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
 
             super.onSurfaceCreated(holder);
 
-            stamps = new Bitmap[]{
-                    generateStamp(),
-                    generateStamp(),
-                    generateStamp()
-            };
-
+            strip = new Strip();
         }
 
         @Override
@@ -88,10 +185,9 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
         public void onSurfaceDestroyed(SurfaceHolder holder) {
             super.onSurfaceDestroyed(holder);
 
-            for (int i = 0; i < stamps.length; i++) {
-                stamps[i].recycle();
-            }
-            stamps = null;
+            this.strip.recycle();
+            this.strip = null;
+
             this.visible = false;
             handler.removeCallbacks(drawRunner);
         }
@@ -99,43 +195,6 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
         private int getRandomColor() {
             float hue = (float) (360f * Math.random());
             return Color.HSVToColor(new float[]{hue, 1f, 1f});
-        }
-
-        private PointF getRandomPointWithinStamp() {
-            float x = (float) (size * Math.random() / 2);
-            float y = (float) (size * Math.random());
-            return new PointF(x, y);
-        }
-
-        public Bitmap generateStamp() {
-            Paint paint = new Paint();
-            paint.setAntiAlias(true);
-            paint.setStyle(Paint.Style.FILL);
-
-            Bitmap bitmap = Bitmap.createBitmap(size / 2, size, Bitmap.Config.ARGB_8888);
-            Canvas canvas = new Canvas(bitmap);
-
-            for (int i = 0; i < 3; i++) {
-                Path elPath = new Path();
-                PointF p = getRandomPointWithinStamp();
-                elPath.moveTo(p.x, p.y);
-                int n = 2 + (int) (3 * Math.random());
-                for (int j = 0; j < n; j++) {
-                    p = getRandomPointWithinStamp();
-                    elPath.lineTo(p.x, p.y);
-                }
-                elPath.close();
-                paint.setColor(getRandomColor());
-                canvas.drawPath(elPath, paint);
-            }
-
-            for(int i = 0; i<2; i++) {
-                PointF p = getRandomPointWithinStamp();
-                paint.setColor(getRandomColor());
-                canvas.drawCircle(p.x, p.y, (float) ((Math.random() * size) / 4), paint);
-            }
-
-            return bitmap;
         }
 
         private void draw() {
@@ -176,16 +235,15 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
                                 canvas.save();
                                 canvas.clipPath(path);
 
-                                for (int i = 0; i < stamps.length; i++) {
-                                    matrix.reset();
-                                    matrix.postTranslate(0, 0 - size / 4 + stampsOffset - i * size / 2);
-                                    if (r % 2 > 0) {
-                                        matrix.postScale(1, -1);
-                                    }
-                                    matrix.postRotate(60 * r, 0, 0);
-                                    matrix.postTranslate(x, y);
-                                    canvas.drawBitmap(stamps[i], matrix, null);
+                                // draw strip
+                                matrix.reset();
+                                matrix.postTranslate(0, 0 - 5 * size / 4 + strip.getStampsOffset());
+                                if (r % 2 > 0) {
+                                    matrix.postScale(1, -1);
                                 }
+                                matrix.postRotate(60 * r, 0, 0);
+                                matrix.postTranslate(x, y);
+                                canvas.drawBitmap(strip.getBitmap(), matrix, null);
 
                                 canvas.restore();
                             }
@@ -198,15 +256,7 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
                     holder.unlockCanvasAndPost(canvas);
             }
 
-            stampsOffset += (int) density;
-            if (stampsOffset >= size / 2) {
-                stampsOffset = 0;
-                stamps[0].recycle();
-                for (int i = 0; i < stamps.length - 1; i++) {
-                    stamps[i] = stamps[i + 1];
-                }
-                stamps[stamps.length - 1] = generateStamp();
-            }
+            this.strip.move();
 
             if (visible) {
                 handler.postDelayed(drawRunner, 40);
