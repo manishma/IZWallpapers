@@ -29,7 +29,6 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
 
         };
 
-        private final Paint paint;
         private final float density;
         private final int size;
         private final Path segmentPath;
@@ -41,10 +40,6 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
         private int bgColor;
 
         public KaleidoscopeWallpaperEngine() {
-            paint = new Paint();
-            paint.setAntiAlias(true);
-            paint.setStyle(Paint.Style.FILL);
-
             density = getResources().getDisplayMetrics().density;
 
             size = 4 * (int) (160 * density / 4);
@@ -106,6 +101,9 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
         }
 
         public Bitmap generateStamp() {
+            Paint paint = new Paint();
+            paint.setAntiAlias(true);
+            paint.setStyle(Paint.Style.FILL);
 
             Bitmap bitmap = Bitmap.createBitmap(size / 2, size, Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(bitmap);
@@ -122,6 +120,12 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
                 elPath.close();
                 paint.setColor(getRandomColor());
                 canvas.drawPath(elPath, paint);
+            }
+
+            for(int i = 0; i<2; i++) {
+                PointF p = getRandomPointWithinStamp();
+                paint.setColor(getRandomColor());
+                canvas.drawCircle(p.x, p.y, (float) ((Math.random() * size) / 4), paint);
             }
 
             return bitmap;
@@ -173,7 +177,7 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
                                     }
                                     matrix.postRotate(60 * r, 0, 0);
                                     matrix.postTranslate(x, y);
-                                    canvas.drawBitmap(stamps[i], matrix, paint);
+                                    canvas.drawBitmap(stamps[i], matrix, null);
                                 }
 
                                 canvas.restore();
