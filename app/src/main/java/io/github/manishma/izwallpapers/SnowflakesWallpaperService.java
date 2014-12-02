@@ -40,6 +40,7 @@ public class SnowflakesWallpaperService extends WallpaperService {
             Paint paint = new Paint();
             paint.setAntiAlias(true);
             paint.setStyle(Paint.Style.FILL);
+            paint.setColor(Color.WHITE);
 
             int size = 2 * (int) ((40 + 20 * Math.random()) * density / 2);
 
@@ -54,7 +55,6 @@ public class SnowflakesWallpaperService extends WallpaperService {
 
             segmentCanvas.clipPath(path);
 
-            paint.setColor(Color.WHITE);
             paint.setStrokeWidth(2f * density);
             segmentCanvas.drawLine(size / 2, size / 2, size, size / 2, paint);
 
@@ -108,7 +108,6 @@ public class SnowflakesWallpaperService extends WallpaperService {
 
         };
 
-        private final Paint paint;
         private final float density;
         int hue = 0;
         private boolean visible = true;
@@ -117,13 +116,7 @@ public class SnowflakesWallpaperService extends WallpaperService {
         private int height;
 
         public SnowflakesWallpaperEngine() {
-            paint = new Paint();
-            paint.setAntiAlias(true);
-            paint.setStyle(Paint.Style.FILL);
-
             density = getResources().getDisplayMetrics().density;
-
-            handler.post(drawRunner);
         }
 
         @Override
@@ -183,7 +176,7 @@ public class SnowflakesWallpaperService extends WallpaperService {
                         Matrix matrix = new Matrix();
                         matrix.setRotate(((int) (3 * p.y * flake.getRSpeed() / density)) % 360, halfSize, halfSize);
                         matrix.postTranslate(p.x - halfSize, p.y - halfSize);
-                        canvas.drawBitmap(bitmap, matrix, paint);
+                        canvas.drawBitmap(bitmap, matrix, null);
 
                         p.offset((int) (density * 3 * (Math.sin(p.y / density / 10) / 2 + flake.getHSpeed())), (int) (1.5 * density));
 
