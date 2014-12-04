@@ -32,12 +32,21 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
 
         private final float density;
         private final int size;
+        private final float patternWidthF;
+        private final float patternHeightF;
+        private final int patternWidth;
+        private final int patternHeight;
         private final Path segmentPath;
+        private final Path patternPath;
         private int width;
         private int height;
         private boolean visible = true;
         private int bgColor;
         private Strip strip;
+        private int columns;
+        private int lines;
+        private int y0;
+        private int x0;
 
         private class Strip {
 
@@ -148,11 +157,26 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
 
             size = 4 * (int) (160 * density / 4);
 
+            patternWidthF = size * 0.866f;
+            patternHeightF = size;
+
+            patternWidth = 2 * (int) Math.ceil(patternWidthF / 2);
+            patternHeight = size;
+
             segmentPath = new Path();
             segmentPath.moveTo(0, 0);
             segmentPath.lineTo(0.433f * size, -size / 4);
             segmentPath.lineTo(0.433f * size, size / 4);
             segmentPath.close();
+
+            patternPath = new Path();
+            patternPath.moveTo(-0.433f * size, -size / 4);
+            patternPath.lineTo(0, -size / 2);
+            patternPath.lineTo(0.433f * size, -size / 4);
+            patternPath.lineTo(0.433f * size, size / 4);
+            patternPath.lineTo(0, size / 2);
+            patternPath.lineTo(-0.433f * size, size / 4);
+            patternPath.close();
 
             bgColor = getRandomColor();
         }
@@ -182,6 +206,12 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
 
             this.width = width;
             this.height = height;
+
+            this.columns = (int) Math.ceil((this.width - patternWidthF) / 2 / patternWidthF);
+            this.lines = (int) Math.ceil((2 * this.height - patternHeightF) / 3 / patternHeightF);
+            this.y0 = this.height / 2;
+            this.x0 = this.width / 2;
+
         }
 
         @Override
@@ -210,50 +240,63 @@ public class KaleidoscopeWallpaperService extends WallpaperService {
 
                     canvas.drawColor(bgColor);
 
-                    float patternWidth = size * 0.866f;
-                    float patternHeight = size;
-
-                    int columns = (int) Math.ceil((this.width - patternWidth) / 2 / patternWidth);
-                    int lines = (int) Math.ceil((2 * this.height - patternHeight) / 3 / patternHeight);
-                    float y0 = this.height / 2;
-                    float x0 = this.width / 2;
                     Matrix matrix = new Matrix();
+
+                    Bitmap pattern = Bitmap.createBitmap(patternWidth, patternHeight, Bitmap.Config.ARGB_8888);
+                    Canvas pattenCanvas = new Canvas(pattern);
+                    for (int r = 0; r < 6; r++) {
+
+                        matrix.reset();
+                        matrix.postRotate(60 * r, 0, 0);
+                        matrix.postTranslate(patternWidth / 2, patternHeight / 2);
+
+                        Path path = new Path(segmentPath);
+                        path.transform(matrix);
+
+                        pattenCanvas.save();
+                        pattenCanvas.clipPath(path);
+
+                        // draw strip
+                        matrix.reset();
+                        matrix.postTranslate(0, 0 - 5 * size / 4 + strip.getStampsOffset());
+                        if (r % 2 > 0) {
+                            matrix.postScale(1, -1);
+                        }
+                        matrix.postRotate(60 * r, 0, 0);
+                        matrix.postTranslate(patternWidth / 2, patternHeight / 2);
+                        pattenCanvas.drawBitmap(strip.getBitmap(), matrix, null);
+
+                        pattenCanvas.restore();
+                    }
+
 
                     for (int l = -lines; l <= lines; l++) {
 
-                        float y = y0 + l * 3 * patternHeight / 4;
+                        float y = y0 + l * 3 * patternHeightF / 4;
 
                         for (int c = -columns; c <= columns + Math.abs(l) % 2; c++) {
 
-                            float x = x0 + c * patternWidth - (Math.abs(l) % 2) * patternWidth / 2;
+                            float x = x0 + c * patternWidthF - (Math.abs(l) % 2) * patternWidthF / 2;
 
-                            for (int r = 0; r < 6; r++) {
+                            matrix.reset();
+                            matrix.postTranslate(x, y);
+                            Path path = new Path(patternPath);
+                            path.transform(matrix);
 
-                                matrix.reset();
-                                matrix.postRotate(60 * r, 0, 0);
-                                matrix.postTranslate(x, y);
+                            canvas.save();
+                            canvas.clipPath(path);
 
-                                Path path = new Path(segmentPath);
-                                path.transform(matrix);
+                            // draw pattern
+                            matrix.reset();
+                            matrix.postTranslate(x - patternWidth / 2, y - patternHeight / 2);
+                            canvas.drawBitmap(pattern, matrix, null);
 
-                                canvas.save();
-                                canvas.clipPath(path);
-
-                                // draw strip
-                                matrix.reset();
-                                matrix.postTranslate(0, 0 - 5 * size / 4 + strip.getStampsOffset());
-                                if (r % 2 > 0) {
-                                    matrix.postScale(1, -1);
-                                }
-                                matrix.postRotate(60 * r, 0, 0);
-                                matrix.postTranslate(x, y);
-                                canvas.drawBitmap(strip.getBitmap(), matrix, null);
-
-                                canvas.restore();
-                            }
+                            canvas.restore();
 
                         }
                     }
+
+                    pattern.recycle();
                 }
             } finally {
                 if (canvas != null)
